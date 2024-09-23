@@ -60,9 +60,9 @@ end
 DATA = image_bitdecode(DATA,OFDM);
 figure,
 subplot(121)
-imshow(DATA.Data)
+imshow(DATA.Data), title('Original Image')
 subplot(122)
-imshow(DATA.DataHat)
+imshow(DATA.DataHat), title('Received Image')
 
 %% Local Functions
 function DATA = image_bitencode(DATA)
