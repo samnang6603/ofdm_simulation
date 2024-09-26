@@ -40,6 +40,7 @@ OFDM.NumPilotPerFrame = OFDM.NumCarriersPerFrame/OFDM.NumPilotSpacing;
 OFDM.NumCarrierPilotPerFrame = OFDM.NumCarriersPerFrame + OFDM.NumPilotPerFrame;
 OFDM.NumCyclicSymsPerFrame = floor(OFDM.NumCarriersPerFrame*0.25);
 OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarrierPilotPerFrame*0.25);
+OFDM.FECToggle = 1;
 
 %% Channel parameter
 CHANNEL.TapLength = 6;
@@ -51,11 +52,18 @@ if ~SIM.Fading % if no fading, don't do eq
     CHANNEL.Equalization = false;
 end
 
+%% FEC parameter
+FEC.Constraint = 7;
+FEC.Trellis = poly2trellis(FEC.Constraint,[171 133]);
+FEC.VitDec.TraceBackDepth = 5*(FEC.Constraint-1); % approx for constraint
+FEC.VitDec.OpMode = 'trunc';
+FEC.VitDec.DecType = 'hard';
+
 %% Start Sim
 for frame = 1:OFDM.NumFrames
-    OFDM = ofdm_transmit(DATA,OFDM,SIM,frame);
+    OFDM = ofdm_transmit(DATA,OFDM,SIM,FEC,frame);
     [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,SIM);
-    [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,frame);
+    [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,FEC,frame);
 end
 DATA = image_bitdecode(DATA,OFDM);
 figure,
@@ -95,9 +103,13 @@ end
 DATA.DataHat = reshape(DATA.DataHat,DATA.Size);
 end
 
-function OFDM = ofdm_transmit(DATA,OFDM,SIM,frame)
+function OFDM = ofdm_transmit(DATA,OFDM,SIM,FEC,frame)
 OFDM.data_frame = DATA.BitData((frame-1)*OFDM.NumBitsPerFrame+1:...
                   (frame-1)*OFDM.NumBitsPerFrame+OFDM.NumBitsPerFrame);
+if OFDM.FECToggle
+    OFDM.data_frame = convenc(OFDM.data_frame,FEC.Trellis);
+end
+
 OFDM.TxSymbols = qammod(OFDM.data_frame,OFDM.M,InputType='bit',UnitAveragePower=1);
 
 if SIM.ChannelEstimation
@@ -162,7 +174,7 @@ end
 OFDM.IdMatrixDiagLength = OFDM.NumCarrierPilotPerFrame;
 end
 
-function [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,frame)
+function [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,FEC,frame)
 cext_rem = OFDM.TxAirChannel;
 if SIM.ChannelEstimation
     cext_rem(1:OFDM.NumCyclicPilotSymsPerFrame) = [];
@@ -180,7 +192,14 @@ end
 if CHANNEL.Equalization
     [OFDM,CHANNEL] = channel_apply_eq(CHANNEL,OFDM,SIM);
 end
-OFDM.RxDemod = qamdemod(OFDM.RxFFT,OFDM.M,'gray',OutputType='bit',UnitAveragePower=1);
+
+OFDM.RxDemod = qamdemod(OFDM.RxFFT,OFDM.M,OutputType='bit',UnitAveragePower=1);
+
+if OFDM.FECToggle
+    OFDM.RxDemod = vitdec(OFDM.RxDemod,FEC.Trellis,FEC.VitDec.TraceBackDepth,...
+                          FEC.VitDec.OpMode,FEC.VitDec.DecType);
+end
+
 DATA.DataHatVec((frame-1)*OFDM.NumBitsPerFrame+1:...
     (frame-1)*OFDM.NumBitsPerFrame+OFDM.NumBitsPerFrame) = OFDM.RxDemod;
 end
