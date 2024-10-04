@@ -15,7 +15,7 @@ seed = randi([1 1e7],1,1);
 % Modulation 16-QAM
 NumQam=16;
 K=log2(NumQam);
-EbN0 = 10;
+EbN0 = 25;
 SNR = EbN0 + 10*log10(sqrt(10));    % Convert EbN0 to SNR
 chanlen = 6;
 
@@ -45,7 +45,7 @@ data_hat_MMSE_eq = data_hat;
 
 %% Generating and coding data
 NumBits = total_bits; % # bits. Can modify this, but has to be power of two
-NumBitsPerFrame=256*2;
+NumBitsPerFrame=256*4;
 NumFrames = NumBits/NumBitsPerFrame;
 NumCarriersPerFrame=NumBitsPerFrame/K;
 NumPilotPerFrame = NumCarriersPerFrame/NumPilotSpacing;

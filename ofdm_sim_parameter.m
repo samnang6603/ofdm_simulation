@@ -15,7 +15,7 @@ clear, clc, close all
 
 %% Simulation parameter
 rng('shuffle');
-SIM.EbN0 = 10;
+SIM.EbN0 = 15;
 SIM.SNR = SIM.EbN0 + 10*log10(sqrt(10));
 SIM.Fading = true;
 SIM.AWGN = true;
@@ -23,6 +23,7 @@ SIM.ChannelEstimation = true;
 if ~SIM.Fading % if no fading, don't estimate
     SIM.ChannelEstimation = false;
 end
+SIM.FECToggle = 1;
 
 %% Data parameter
 DATA.Data = imread('cameraman2.tif');
@@ -40,7 +41,6 @@ OFDM.NumPilotPerFrame = OFDM.NumCarriersPerFrame/OFDM.NumPilotSpacing;
 OFDM.NumCarrierPilotPerFrame = OFDM.NumCarriersPerFrame + OFDM.NumPilotPerFrame;
 OFDM.NumCyclicSymsPerFrame = floor(OFDM.NumCarriersPerFrame*0.25);
 OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarrierPilotPerFrame*0.25);
-OFDM.FECToggle = 0;
 
 %% Channel parameter
 CHANNEL.TapLength = 6;
@@ -107,7 +107,7 @@ function OFDM = ofdm_transmit(DATA,OFDM,SIM,FEC,frame)
 OFDM.data_frame = DATA.BitData((frame-1)*OFDM.NumBitsPerFrame+1:...
                   (frame-1)*OFDM.NumBitsPerFrame+OFDM.NumBitsPerFrame);
 OFDM.data_frame_codeword = OFDM.data_frame;
-if OFDM.FECToggle
+if SIM.FECToggle
     OFDM.data_frame_codeword = convenc(OFDM.data_frame,FEC.Trellis);
     % Update OFDM parameter based on FEC parameter
     OFDM.NumBitsPerFrame = length(OFDM.data_frame_codeword); 
@@ -203,7 +203,7 @@ end
 
 OFDM.RxDemod = qamdemod(OFDM.RxFFT,OFDM.M,OutputType='bit',UnitAveragePower=1);
 
-if OFDM.FECToggle
+if SIM.FECToggle
     OFDM.RxDemod = vitdec(OFDM.RxDemod,FEC.Trellis,FEC.VitDec.TraceBackDepth,...
                           FEC.VitDec.OpMode,FEC.VitDec.DecType);
     % Re-update OFDM param after decoding
