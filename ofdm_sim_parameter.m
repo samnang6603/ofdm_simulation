@@ -11,7 +11,7 @@
 %}
 
 %% 
-clear, clc, close all
+clear, clc
 
 %% Simulation parameter
 rng('shuffle');
@@ -24,6 +24,7 @@ if ~SIM.Fading % if no fading, don't estimate
     SIM.ChannelEstimation = false;
 end
 SIM.FECToggle = 1;
+SIM.Interleave = 1;
 
 %% Data parameter
 DATA.Data = imread('cameraman2.tif');
@@ -61,7 +62,7 @@ FEC.VitDec.DecType = 'hard';
 
 %% Start Sim
 for frame = 1:OFDM.NumFrames
-    OFDM = ofdm_transmit(DATA,OFDM,SIM,FEC,frame);
+    [OFDM,FEC] = ofdm_transmit(DATA,OFDM,SIM,FEC,frame);
     [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,SIM);
     [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,FEC,frame);
 end
@@ -103,9 +104,13 @@ end
 DATA.DataHat = reshape(DATA.DataHat,DATA.Size);
 end
 
-function OFDM = ofdm_transmit(DATA,OFDM,SIM,FEC,frame)
+function [OFDM,FEC] = ofdm_transmit(DATA,OFDM,SIM,FEC,frame)
 OFDM.data_frame = DATA.BitData((frame-1)*OFDM.NumBitsPerFrame+1:...
                   (frame-1)*OFDM.NumBitsPerFrame+OFDM.NumBitsPerFrame);
+if SIM.Interleave
+    FEC.IntrlvElem = randperm(length(OFDM.data_frame));
+    OFDM.data_frame = intrlv(OFDM.data_frame,FEC.IntrlvElem);
+end
 OFDM.data_frame_codeword = OFDM.data_frame;
 if SIM.FECToggle
     OFDM.data_frame_codeword = convenc(OFDM.data_frame,FEC.Trellis);
@@ -208,6 +213,9 @@ if SIM.FECToggle
                           FEC.VitDec.OpMode,FEC.VitDec.DecType);
     % Re-update OFDM param after decoding
     OFDM.NumBitsPerFrame = length(OFDM.data_frame);
+end
+if SIM.Interleave
+    OFDM.RxDemod = deintrlv(OFDM.RxDemod,FEC.IntrlvElem);
 end
 
 DATA.DataHatVec((frame-1)*OFDM.NumBitsPerFrame+1:...
