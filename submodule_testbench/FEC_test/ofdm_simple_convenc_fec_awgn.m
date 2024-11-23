@@ -1,4 +1,4 @@
-%% 
+%% FEC Convolutional code testbench
 
 close all; clear; clc
 

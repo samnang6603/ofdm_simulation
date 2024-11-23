@@ -23,7 +23,12 @@ chanlen = 6;
 NumPilotSpacing = 16;
 
 %% Data
-x = imread('cameraman2.tif');
+main_path = fileparts(cd);
+path_part = strsplit(main_path,filesep);
+main_folder_ind = find(strcmp(path_part,'ofdm_simulation'));
+path_part(end:main_folder_ind+1) = [];
+data_file_path = fullfile(strjoin(path_part,filesep),'data','cameraman2.tif');
+x = imread(data_file_path);
 Lx = numel(x);
 xhat = zeros(Lx,1,'uint8');
 xhat_eq = xhat;

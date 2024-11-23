@@ -27,7 +27,14 @@ SIM.FECToggle = 1;
 SIM.Interleave = 1;
 
 %% Data parameter
-DATA.Data = imread('cameraman2.tif');
+main_path = fileparts(cd);
+path_parts = strsplit(main_path,filesep);
+main_folder_ind = find(strcmp(path_parts,'ofdm_simulation'));
+if length(path_parts) > main_folder_ind
+    path_parts(end:main_folder_ind+1) = [];
+end
+data_file_path = fullfile(strjoin(path_parts,filesep),'data','cameraman2.tif');
+DATA.Data = imread(data_file_path);
 DATA = image_bitencode(DATA);
 
 %% OFDM parameter
