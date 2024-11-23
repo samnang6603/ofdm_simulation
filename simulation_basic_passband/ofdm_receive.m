@@ -1,5 +1,12 @@
-function [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,FEC,frame)
+function [OFDM,DATA] = ofdm_receive(DATA,OFDM,RF,CHANNEL,SIM,FEC,frame)
+
+if RF.PassBandProcessingToggle
+    % downconvert to baseband
+    [OFDM,RF] = rf_downconvert(OFDM,RF);
+end
+
 cext_rem = OFDM.TxAirChannel;
+
 if SIM.ChannelEstimation
     cext_rem(1:OFDM.NumCyclicPilotSymsPerFrame) = [];
     OFDM.RxFFT = fft(cext_rem);

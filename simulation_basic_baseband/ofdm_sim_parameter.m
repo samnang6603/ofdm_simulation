@@ -42,7 +42,7 @@ OFDM.M = 16;
 OFDM.BitsPerSymbol = log2(OFDM.M);
 OFDM.NumPilotSpacing = 8;
 OFDM.NumBits = DATA.TotalBits;
-OFDM.NumBitsPerFrame = 256;
+OFDM.NumBitsPerFrame = 256*4;
 OFDM.NumFrames = OFDM.NumBits/OFDM.NumBitsPerFrame;
 OFDM.NumCarriersPerFrame = OFDM.NumBitsPerFrame/OFDM.BitsPerSymbol;
 OFDM.NumPilotPerFrame = OFDM.NumCarriersPerFrame/OFDM.NumPilotSpacing;
@@ -163,7 +163,7 @@ end
 function [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,SIM)
 if SIM.Fading
     CHANNEL.ImpulseResponse = jake(120,CHANNEL.TapLength);
-    CHANNEL.ImpulseResponse = 1/sqrt(2)*(randn(6,1) + 1j*randn(6,1)); 
+    %CHANNEL.ImpulseResponse = 1/sqrt(2)*(randn(6,1) + 1j*randn(6,1)); 
 else
     CHANNEL.ImpulseResponse = 1;
 end

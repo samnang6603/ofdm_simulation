@@ -15,7 +15,7 @@ clear, clc
 
 %% Simulation parameters
 rng('shuffle');
-SIM.EbN0 = 25;
+SIM.EbN0 = 10;
 SIM.SNR = SIM.EbN0 + 10*log10(sqrt(10));
 SIM.Fading = true;
 SIM.AWGN = true;
@@ -51,8 +51,9 @@ OFDM.NumCyclicSymsPerFrame = floor(OFDM.NumCarriersPerFrame*0.25);
 OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarrierPilotPerFrame*0.25);
 
 %% Passband Upconverter parameters
-RF.CarrierFrequency = 20e3; % using 20 Khz for carrier
-RF.SamplingFrequency = 4*RF.CarrierFrequency; % sampling frequency is 4 times fc
+RF.PassBandProcessingToggle = 1;
+RF.CarrierFrequency = 100e3; % carrier frequency
+RF.SamplingFrequency = 20*RF.CarrierFrequency; % sampling frequency
 RF.SamplingPeriod = 1/RF.SamplingFrequency;
 
 %% Channel parameters
@@ -75,9 +76,9 @@ FEC.VitDec.DecType = 'hard';
 
 %% Start Sim
 for frame = 1:OFDM.NumFrames
-    [OFDM,FEC] = ofdm_transmit(DATA,OFDM,SIM,FEC,frame);
-    [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,SIM);
-    [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,FEC,frame);
+    [OFDM,RF,FEC] = ofdm_transmit(DATA,OFDM,RF,SIM,FEC,frame);
+    [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,RF,SIM);
+    [OFDM,DATA] = ofdm_receive(DATA,OFDM,RF,CHANNEL,SIM,FEC,frame);
 end
 DATA = image_bitdecode(DATA,OFDM);
 error_percentage = 100*sum(DATA.BitData == DATA.BitDataHat)/length(DATA.BitData);

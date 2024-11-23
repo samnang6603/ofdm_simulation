@@ -1,4 +1,4 @@
-function [OFDM,FEC] = ofdm_transmit(DATA,OFDM,SIM,FEC,frame)
+function [OFDM,RF,FEC] = ofdm_transmit(DATA,OFDM,RF,SIM,FEC,frame)
 OFDM.data_frame = DATA.BitData((frame-1)*OFDM.NumBitsPerFrame+1:...
                   (frame-1)*OFDM.NumBitsPerFrame+OFDM.NumBitsPerFrame);
 
@@ -40,7 +40,9 @@ else
 end
 OFDM.TxAir = cext_data;
 
-% upconvert to passband carrrier
-% [OFDM,RF] = rf_upconvert(OFDM,RF);
+if RF.PassBandProcessingToggle
+    % upconvert to passband carrrier
+    [OFDM,RF] = rf_upconvert(OFDM,RF);
+end
 
 end
