@@ -1,0 +1,19 @@
+function [OFDM,CHANNEL] = channel_estimate(CHANNEL,OFDM,SIM)
+switch lower(CHANNEL.EstimationType)
+    case 'mmse'
+        % Minimum-Mean-Squared-Error method
+        CHANNEL.EstFreqResponse = chanest_mmse(OFDM.RxFFT,OFDM.PilotSignal,...
+                                               OFDM.PilotSignalLocation,...
+                                               OFDM.NumCarrierPilotPerFrame,...
+                                               OFDM.NumPilotSpacing,...
+                                               CHANNEL.ImpulseResponse.',SIM.SNR);
+        CHANNEL = chanest_dft_enhance(CHANNEL,OFDM.NumCarrierPilotPerFrame);
+    otherwise
+        % Least-Square method default
+        CHANNEL.EstFreqResponse = chanest_ls(OFDM.RxFFT,OFDM.PilotSignal,...
+                                             OFDM.PilotSignalLocation,...
+                                             OFDM.NumCarrierPilotPerFrame);
+        CHANNEL = chanest_dft_enhance(CHANNEL,OFDM.NumCarrierPilotPerFrame);
+end
+OFDM.IdMatrixDiagLength = OFDM.NumCarrierPilotPerFrame;
+end
