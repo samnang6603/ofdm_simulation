@@ -50,11 +50,29 @@ OFDM.NumCarrierPilotPerFrame = OFDM.NumCarriersPerFrame + OFDM.NumPilotPerFrame;
 OFDM.NumCyclicSymsPerFrame = floor(OFDM.NumCarriersPerFrame*0.25);
 OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarrierPilotPerFrame*0.25);
 
-%% Passband Upconverter parameters
+%% Passband Upconverter, Antenna, and Air RF Impairment parameters
+% Upconverter parameters
 RF.PassBandProcessingToggle = 1;
 RF.CarrierFrequency = 100e3; % carrier frequency
 RF.SamplingFrequency = 20*RF.CarrierFrequency; % sampling frequency
 RF.SamplingPeriod = 1/RF.SamplingFrequency;
+
+% TX-RX Antenna properties
+RF.ANTENNA.TxGain = 2;
+RF.ANTENNA.RxGain = 2;
+
+% Impairment: IQImbalance 
+RF.IMPAIRMENT.IQImbalanceToggle = 1;
+RF.IMPAIRMENT.IGainImbalance = 0.1;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.QGainImbalance = 0.1;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.PhaseImbalance = 5;   % Phase imbalance in degrees (e.g., 5 degrees)
+
+% Impairment: Doppler
+RF.IMPAIRMENT.DopplerEffectToggle = 0;
+
+% Impairment: Frequency/Phase Offset
+RF.IMPAIRMENT.FrequencyOffset = 0;
+RF.IMPAIRMENT.PhaseOffset = 0;
 
 %% Channel parameters
 CHANNEL.TapLength = 6;
