@@ -24,10 +24,12 @@ NumPilotSpacing = 16;
 
 %% Data
 main_path = fileparts(cd);
-path_part = strsplit(main_path,filesep);
-main_folder_ind = find(strcmp(path_part,'ofdm_simulation'));
-path_part(end:main_folder_ind+1) = [];
-data_file_path = fullfile(strjoin(path_part,filesep),'data','cameraman2.tif');
+path_parts = strsplit(main_path,filesep);
+main_folder_ind = find(strcmp(path_parts,'ofdm_simulation'));
+if length(path_parts) > main_folder_ind
+    path_parts(end:main_folder_ind+1) = [];
+end
+data_file_path = fullfile(strjoin(path_parts,filesep),'data','cameraman2.tif');
 x = imread(data_file_path);
 Lx = numel(x);
 xhat = zeros(Lx,1,'uint8');
