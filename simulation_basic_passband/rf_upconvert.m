@@ -25,4 +25,9 @@ if length(ofdm_syms_zoh) ~= length(RF.PassBandSignalGeneration)
 end
 
 % modulate the baseband with passband (upconvert)
-OFDM.RFTxAir = RF.ANTENNA.TxGain*ofdm_syms_zoh.*RF.PassBandSignalGeneration;
+OFDM.RFTxAir = RF.ANTENNA.TX.Gain*ofdm_syms_zoh.*RF.PassBandSignalGeneration;
+
+% simulate doppler shift if toggle
+if RF.IMPAIRMENT.DOPPLER.DopplerEffectToggle
+    OFDM.RFTxAir = rf_upconvert_impairment_doppler(OFDM.RFTxAir, RF);
+end

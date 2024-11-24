@@ -1,7 +1,9 @@
 function [OFDM,RF] = rf_downconvert(OFDM,RF)
 
+
+
 % multiply by carrier again
-baseband_recovery = RF.ANTENNA.RxGain*conj(RF.PassBandSignalGeneration).*OFDM.RFTxAirChannel;
+baseband_recovery = RF.ANTENNA.RX.Gain*conj(RF.PassBandSignalGeneration).*OFDM.RFTxAirChannel;
 
 % create low pass filter
 % fpass = 100e3; % Passband at 100 kHz to allow baseband recovery

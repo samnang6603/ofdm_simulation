@@ -58,17 +58,27 @@ RF.SamplingFrequency = 20*RF.CarrierFrequency; % sampling frequency
 RF.SamplingPeriod = 1/RF.SamplingFrequency;
 
 % TX-RX Antenna properties
-RF.ANTENNA.TxGain = 2;
-RF.ANTENNA.RxGain = 2;
+RF.ANTENNA.TX.Gain = 2;
+RF.ANTENNA.RX.Gain = 2;
+RF.ANTENNA.RX.PLL.Toggle = 0;
+RF.ANTENNA.RX.PLL.Iterations = 2e3;
+RF.ANTENNA.RX.PLL.NominalClockFrquency = 1e3;
+RF.ANTENNA.RX.PLL.Kp = 0.05;
+RF.ANTENNA.RX.PLL.Ki = 0.01;
+RF.ANTENNA.RX.PLL.PhaseNoiseVariance = 1e-9;
 
 % Impairment: IQImbalance 
 RF.IMPAIRMENT.IQImbalanceToggle = 1;
-RF.IMPAIRMENT.IGainImbalance = 0.1;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
-RF.IMPAIRMENT.QGainImbalance = 0.1;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
-RF.IMPAIRMENT.PhaseImbalance = 5;   % Phase imbalance in degrees (e.g., 5 degrees)
+RF.IMPAIRMENT.IGainImbalance = 0.2;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.QGainImbalance = 0.4;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.PhaseImbalance = 15;   % Phase imbalance in degrees (e.g., 5 degrees)
 
 % Impairment: Doppler
-RF.IMPAIRMENT.DopplerEffectToggle = 0;
+RF.IMPAIRMENT.DOPPLER.DopplerEffectToggle = 0;
+RF.IMPAIRMENT.DOPPLER.FrequencyShift = 30e3; % fixed frequency shift
+RF.IMPAIRMENT.DOPPLER.SpeedOfLight = physconst('LightSpeed'); % for shift calculation
+RF.IMPAIRMENT.DOPPLER.TxVelocity = 0; % for later
+RF.IMPAIRMENT.DOPPLER.RxVelocity = 0; % for later
 
 % Impairment: Frequency/Phase Offset
 RF.IMPAIRMENT.FrequencyOffset = 0;
