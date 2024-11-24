@@ -12,22 +12,22 @@ ofdm_syms_zoh = repmat(OFDM.TxAir,1,RF.CarrierSamplesPerSyms).';
 ofdm_syms_zoh = ofdm_syms_zoh(:);
 
 % If IQimbalance impairment is included
-if RF.IMPAIRMENT.IQImbalanceToggle
+if RF.IMPAIRMENT.IQImbalance.Toggle
     ofdm_syms_zoh = rf_upconvert_impairment_IQimb(ofdm_syms_zoh,RF);
 end
 
 % now generate passband carrier signal
-RF.PassBandSignalGeneration = exp(2*1i*pi*RF.CarrierFrequency*RF.TimeGeneration);
+RF.PassBandSignalUpconvertGeneration = exp(2*1i*pi*RF.CarrierFrequency*RF.TimeGeneration);
 
 % mismatch length checking
-if length(ofdm_syms_zoh) ~= length(RF.PassBandSignalGeneration)
+if length(ofdm_syms_zoh) ~= length(RF.PassBandSignalUpconvertGeneration)
     error('Mismatch between the length of OFDM symbols and passband signal.');
 end
 
 % modulate the baseband with passband (upconvert)
-OFDM.RFTxAir = RF.ANTENNA.TX.Gain*ofdm_syms_zoh.*RF.PassBandSignalGeneration;
+OFDM.RFTxAir = RF.ANTENNA.TX.Gain*ofdm_syms_zoh.*RF.PassBandSignalUpconvertGeneration;
 
 % simulate doppler shift if toggle
-if RF.IMPAIRMENT.DOPPLER.DopplerEffectToggle
+if RF.IMPAIRMENT.DOPPLER.Toggle
     OFDM.RFTxAir = rf_upconvert_impairment_doppler(OFDM.RFTxAir, RF);
 end

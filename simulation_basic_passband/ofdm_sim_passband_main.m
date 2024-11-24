@@ -17,8 +17,8 @@ clear, clc
 rng('shuffle');
 SIM.EbN0 = 10;
 SIM.SNR = SIM.EbN0 + 10*log10(sqrt(10));
-SIM.Fading = true;
-SIM.AWGN = true;
+SIM.Fading = false;
+SIM.AWGN = false;
 SIM.ChannelEstimation = true;
 if ~SIM.Fading % if no fading, don't estimate
     SIM.ChannelEstimation = false;
@@ -51,7 +51,7 @@ OFDM.NumCyclicSymsPerFrame = floor(OFDM.NumCarriersPerFrame*0.25);
 OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarrierPilotPerFrame*0.25);
 
 %% Passband Upconverter, Antenna, and Air RF Impairment parameters
-% Upconverter parameters
+% Upconverter/Downconverter parameters
 RF.PassBandProcessingToggle = 1;
 RF.CarrierFrequency = 100e3; % carrier frequency
 RF.SamplingFrequency = 20*RF.CarrierFrequency; % sampling frequency
@@ -65,17 +65,16 @@ RF.ANTENNA.RX.PLL.Iterations = 2e3;
 RF.ANTENNA.RX.PLL.NominalClockFrquency = 1e3;
 RF.ANTENNA.RX.PLL.Kp = 0.05;
 RF.ANTENNA.RX.PLL.Ki = 0.01;
-RF.ANTENNA.RX.PLL.PhaseNoiseVariance = 1e-9;
 
 % Impairment: IQImbalance 
-RF.IMPAIRMENT.IQImbalanceToggle = 1;
-RF.IMPAIRMENT.IGainImbalance = 0.2;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
-RF.IMPAIRMENT.QGainImbalance = 0.4;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
-RF.IMPAIRMENT.PhaseImbalance = 15;   % Phase imbalance in degrees (e.g., 5 degrees)
+RF.IMPAIRMENT.IQImbalance.Toggle = 0;
+RF.IMPAIRMENT.IQImbalance.IGain = 0.2;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.IQImbalance.QGain = 0.4;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.IQImbalance.PhaseImbalance = 15;   % Phase imbalance in degrees (e.g., 5 degrees)
 
 % Impairment: Doppler
-RF.IMPAIRMENT.DOPPLER.DopplerEffectToggle = 0;
-RF.IMPAIRMENT.DOPPLER.FrequencyShift = 30e3; % fixed frequency shift
+RF.IMPAIRMENT.DOPPLER.Toggle = 1;
+RF.IMPAIRMENT.DOPPLER.FrequencyShift = 10e3; % fixed frequency shift
 RF.IMPAIRMENT.DOPPLER.SpeedOfLight = physconst('LightSpeed'); % for shift calculation
 RF.IMPAIRMENT.DOPPLER.TxVelocity = 0; % for later
 RF.IMPAIRMENT.DOPPLER.RxVelocity = 0; % for later
