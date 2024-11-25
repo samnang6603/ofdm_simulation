@@ -11,7 +11,7 @@ function f_hat = rf_downconvert_dpll(x,RF)
 nIterations = RF.ANTENNA.RX.PLL.Iterations;
 fs          = RF.SamplingFrequency;   % Nominal sampling frequency
 y_ppm       = 50;    % Fractional frequency offset in ppm
-f0          = RF.ANTENNA.RX.PLL.NominalClockFrquency;   % Nominal clock frequency
+f0          = RF.ANTENNA.RX.PLL.NominalClockFrequency;   % Nominal clock frequency
 Kp          = RF.ANTENNA.RX.PLL.Kp;  % Proportional Constant
 Ki          = RF.ANTENNA.RX.PLL.Ki;  % Integral Constant
 pd_choice   = 0;     % Phase Detector Choice (0 -> arctan{.}; 1 -> Im{.})
@@ -83,7 +83,7 @@ end
 
 f_hat = phi_loop(end)*fs/(2*pi)/RF.ANTENNA.RX.PLL.Iterations
 
-f_impaired = RF.CarrierFrequency + RF.IMPAIRMENT.DOPPLER.FrequencyShift % carrier frequency
+f_impaired = RF.CarrierFrequency + RF.IMPAIRMENT.DOPPLER.FrequencyShift; % carrier frequency
 
 
 % Expected filter steady-state value

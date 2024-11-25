@@ -2,7 +2,7 @@ function [OFDM,DATA] = ofdm_receive(DATA,OFDM,RF,CHANNEL,SIM,FEC,frame)
 
 if RF.PassBandProcessingToggle
     % downconvert to baseband
-    [OFDM,RF] = rf_downconvert(OFDM,RF);
+    [OFDM,RF] = rf_downconvert(OFDM,RF,SIM);
 end
 
 cext_rem = OFDM.TxAirChannel;

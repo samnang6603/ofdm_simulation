@@ -98,13 +98,26 @@
 clear
 
 %% Sampling Parameters
-nIterations = 4e3;
-fs          = 1e6;   % Nominal sampling frequency
+nIterations = 12000; %4e3;
+fs          = 2e6;   % Nominal sampling frequency
 y_ppm       = 50;    % Fractional frequency offset in ppm
-f0          = 2*1e3 + 500;   % Nominal clock frequency
+f0          = 10;   % Nominal clock frequency
 pn_var      = 1e-9;  % Phase noise variance
-Kp          = 0.05;  % Proportional Constant
-Ki          = 0.01;  % Integral Constant
+
+Kp          = 1 %0.05;  % Proportional Constant
+%{
+Notes on Kp:
+1. Affects the offset of the phase error from 0
+%}
+
+Ki          = 0.15 %0.01;  % Integral Constant
+%{
+Notes on Ki:
+1. Affects the offset of the phase error from 0
+%}
+
+
+
 pd_choice   = 0;     % Phase Detector Choice (0 -> arctan{.}; 1 -> Im{.})
 
 %% Derived parameters
@@ -138,6 +151,10 @@ phase_noise  = sqrt(pn_var)*randn(nIterations, 1);
 phi_in       = (0:nIterations-1).' * delta_phi_in + phase_noise;
 % Finally, generate the exponential:
 s_in         = exp(1j * phi_in);
+
+load pll_signal_in.mat
+
+s_in  = 10*pll_signal_in;
 
 %% Loop
 
@@ -206,6 +223,8 @@ else
 end
 
 phi_error_filtered_ss_expected = 2*pi * F_offset;
+
+f_hat = phi_loop(end)*fs/(2*pi)/nIterations
 
 %% Performance
 % Input vs. Output Instantaneous Phase

@@ -24,8 +24,11 @@ if length(ofdm_syms_zoh) ~= length(RF.PassBandSignalUpconvertGeneration)
     error('Mismatch between the length of OFDM symbols and passband signal.');
 end
 
-% modulate the baseband with passband (upconvert)
+% upconvert the baseband to passband by multiplying by carrier
 OFDM.RFTxAir = RF.ANTENNA.TX.Gain*ofdm_syms_zoh.*RF.PassBandSignalUpconvertGeneration;
+
+%OFDM.RFTxAir = rf_antenna_agc(OFDM.RFTxAir,RF.ANTENNA.TX.AGC.TargetPower,...
+                        %RF.ANTENNA.TX.Gain,0.1,RF.ANTENNA.TX.AGC.MinMaxGain);
 
 % simulate doppler shift if toggle
 if RF.IMPAIRMENT.DOPPLER.Toggle
