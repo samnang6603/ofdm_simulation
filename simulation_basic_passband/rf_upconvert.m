@@ -4,17 +4,12 @@ OFDM.SymsDurationPerFrame = RF.SamplingPeriod*OFDM.RFTransmitSymsLength; % OFDM 
 RF.CarrierSamplesPerSyms = RF.SamplingFrequency/RF.CarrierFrequency;
 RF.PassBandSamples = OFDM.RFTransmitSymsLength*RF.CarrierSamplesPerSyms;
 RF.TimeGeneration = (0:RF.PassBandSamples-1)*RF.SamplingPeriod; % get the time vector to generate passband carrier
-RF.TimeGeneration = RF.TimeGeneration(:);    
+RF.TimeGeneration = RF.TimeGeneration(:);  
 
 % do ZOH to spread the OFDM samples per frame to match the passband samples
 % perframe with passband sampling frequency
 ofdm_syms_zoh = repmat(OFDM.TxAir,1,RF.CarrierSamplesPerSyms).'; 
 ofdm_syms_zoh = ofdm_syms_zoh(:);
-
-% If IQimbalance impairment is included
-if RF.IMPAIRMENT.IQImbalance.Toggle
-    ofdm_syms_zoh = rf_upconvert_impairment_IQimb(ofdm_syms_zoh,RF);
-end
 
 % now generate passband carrier signal
 RF.PassBandSignalUpconvertGeneration = exp(2*1i*pi*RF.CarrierFrequency*RF.TimeGeneration);

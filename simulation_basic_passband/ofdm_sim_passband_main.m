@@ -15,13 +15,16 @@ clear, clc
 
 %% Simulation parameters
 rng('shuffle');
-SIM.EbN0 = 15;
+SIM.EbN0 = 5;
 SIM.SNR = SIM.EbN0 + 10*log10(sqrt(10));
 SIM.Fading = false;
 SIM.AWGN = false;
 SIM.PilotSignalToggle = true;
 SIM.ChannelEstimation = true;
 if ~SIM.Fading % if no fading, don't estimate
+    SIM.ChannelEstimation = false;
+end
+if ~SIM.PilotSignalToggle % if no pilot signal, can't estimate
     SIM.ChannelEstimation = false;
 end
 SIM.FECToggle = 0;
@@ -53,7 +56,7 @@ OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarrierPilotPerFrame*0.25);
 
 %% Passband Upconverter, Antenna, and Air RF Impairment parameters
 % Upconverter/Downconverter parameters
-RF.PassBandProcessingToggle = 1;
+RF.PassBandProcessingToggle = 0;
 RF.CarrierFrequency = 100e3; % carrier frequency
 RF.SamplingFrequency = 20*RF.CarrierFrequency; % sampling frequency
 RF.SamplingPeriod = 1/RF.SamplingFrequency;
@@ -74,21 +77,19 @@ RF.ANTENNA.RX.PLL.Kp = 1.5;
 RF.ANTENNA.RX.PLL.Ki = 0.03;
 
 % Impairment: IQImbalance 
-RF.IMPAIRMENT.IQImbalance.Toggle = 1;
-RF.IMPAIRMENT.IQImbalance.IGain = 0.2;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
-RF.IMPAIRMENT.IQImbalance.QGain = 0.4;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
-RF.IMPAIRMENT.IQImbalance.PhaseImbalance = 15;   % Phase imbalance in degrees (e.g., 5 degrees)
+RF.IMPAIRMENT.IQImbalance.Toggle = 0;
+RF.IMPAIRMENT.IQImbalance.IGain = 0;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.IQImbalance.QGain = 0.2;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.IQImbalance.Phase = 0;   % Phase imbalance in degrees (e.g., 5 degrees)
+RF.IMPAIRMENT.IQImbalance.MitigationToggle = 0;
 
 % Impairment: Doppler
 RF.IMPAIRMENT.DOPPLER.Toggle = 0;
 RF.IMPAIRMENT.DOPPLER.FrequencyShift = 10e3; % fixed frequency shift
+RF.IMPAIRMENT.DOPPLER.PhaseShift = 0;
 RF.IMPAIRMENT.DOPPLER.SpeedOfLight = physconst('LightSpeed'); % for shift calculation
 RF.IMPAIRMENT.DOPPLER.TxVelocity = 0; % for later
 RF.IMPAIRMENT.DOPPLER.RxVelocity = 0; % for later
-
-% Impairment: Frequency/Phase Offset
-RF.IMPAIRMENT.FrequencyOffset = 0;
-RF.IMPAIRMENT.PhaseOffset = 0;
 
 %% Channel parameters
 CHANNEL.TapLength = 6;

@@ -23,8 +23,8 @@ SIM.ChannelEstimation = true;
 if ~SIM.Fading % if no fading, don't estimate
     SIM.ChannelEstimation = false;
 end
-SIM.FECToggle = 1;
-SIM.Interleave = 1;
+SIM.FECToggle = 0;
+SIM.Interleave = 0;
 
 %% Data parameter
 main_path = fileparts(cd);
@@ -74,6 +74,10 @@ for frame = 1:OFDM.NumFrames
     [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,FEC,frame);
 end
 DATA = image_bitdecode(DATA,OFDM);
+error_percentage = 100*sum(DATA.BitData == DATA.BitDataHat)/length(DATA.BitData);
+ber = sum(DATA.BitData ~= DATA.BitDataHat)/length(DATA.BitData);
+fprintf('Correct bit recovered = %.6f%% \n',error_percentage);
+fprintf('BER = %.6f \n',ber);
 figure,
 subplot(121)
 imshow(DATA.Data), title('Original Image')
@@ -94,13 +98,13 @@ for m = 0:DATA.NumElement-1
     bit_num = sscanf(str,'%d');
     DATA.BitData(8*m+1:8*m+8) =  bit_num;
 end
-DATA.DataHatVec = zeros(DATA.TotalBits,1,'uint8'); % placeholder for decoded data
+DATA.BitDataHat = zeros(DATA.TotalBits,1,'uint8'); % placeholder for decoded data
 DATA.DataHat = zeros(DATA.NumElement,1,'uint8');
 end
 
 function DATA = image_bitdecode(DATA,OFDM)
 % decode grayscale
-data_hat_reshape = reshape(DATA.DataHatVec,8,DATA.TotalBits/8).';
+data_hat_reshape = reshape(DATA.BitDataHat,8,DATA.TotalBits/8).';
 data_hat_decode = mat2str(data_hat_reshape);
 data_hat_decode([1 end]) = [];
 for m = 0:DATA.NumElement-1
@@ -225,7 +229,7 @@ if SIM.Interleave
     OFDM.RxDemod = deintrlv(OFDM.RxDemod,FEC.IntrlvElem);
 end
 
-DATA.DataHatVec((frame-1)*OFDM.NumBitsPerFrame+1:...
+DATA.BitDataHat((frame-1)*OFDM.NumBitsPerFrame+1:...
     (frame-1)*OFDM.NumBitsPerFrame+OFDM.NumBitsPerFrame) = OFDM.RxDemod;
 end
 
