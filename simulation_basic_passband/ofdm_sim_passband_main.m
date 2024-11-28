@@ -11,14 +11,14 @@
 %}
 
 %% 
-clear, clc
+clear
 
 %% Simulation parameters
 rng('shuffle');
-SIM.EbN0 = 5;
+SIM.EbN0 = 10;
 SIM.SNR = SIM.EbN0 + 10*log10(sqrt(10));
-SIM.Fading = false;
-SIM.AWGN = false;
+SIM.Fading = true;
+SIM.AWGN = true;
 SIM.PilotSignalToggle = true;
 SIM.ChannelEstimation = true;
 if ~SIM.Fading % if no fading, don't estimate
@@ -56,7 +56,7 @@ OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarrierPilotPerFrame*0.25);
 
 %% Passband Upconverter, Antenna, and Air RF Impairment parameters
 % Upconverter/Downconverter parameters
-RF.PassBandProcessingToggle = 0;
+RF.PassBandProcessingToggle = 1;
 RF.CarrierFrequency = 100e3; % carrier frequency
 RF.SamplingFrequency = 20*RF.CarrierFrequency; % sampling frequency
 RF.SamplingPeriod = 1/RF.SamplingFrequency;
@@ -77,11 +77,12 @@ RF.ANTENNA.RX.PLL.Kp = 1.5;
 RF.ANTENNA.RX.PLL.Ki = 0.03;
 
 % Impairment: IQImbalance 
-RF.IMPAIRMENT.IQImbalance.Toggle = 0;
-RF.IMPAIRMENT.IQImbalance.IGain = 0;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
-RF.IMPAIRMENT.IQImbalance.QGain = 0.2;  % 10% gain imbalance (e.g., 0.1 means 10% gain difference)
-RF.IMPAIRMENT.IQImbalance.Phase = 0;   % Phase imbalance in degrees (e.g., 5 degrees)
-RF.IMPAIRMENT.IQImbalance.MitigationToggle = 0;
+RF.IMPAIRMENT.IQImbalance.Toggle = 1;
+RF.IMPAIRMENT.IQImbalance.IGain = 0;  % I gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.IQImbalance.QGain = 0.2;  % Q gain imbalance (e.g., 0.1 means 10% gain difference)
+RF.IMPAIRMENT.IQImbalance.Phase = 15;   % Phase imbalance in degrees (e.g., 5 degrees)
+RF.IMPAIRMENT.IQImbalance.Mitigation.Toggle = 1;
+RF.IMPAIRMENT.IQImbalance.Mitigation.Iteration = 1e3;
 
 % Impairment: Doppler
 RF.IMPAIRMENT.DOPPLER.Toggle = 0;
@@ -90,6 +91,14 @@ RF.IMPAIRMENT.DOPPLER.PhaseShift = 0;
 RF.IMPAIRMENT.DOPPLER.SpeedOfLight = physconst('LightSpeed'); % for shift calculation
 RF.IMPAIRMENT.DOPPLER.TxVelocity = 0; % for later
 RF.IMPAIRMENT.DOPPLER.RxVelocity = 0; % for later
+
+%% FEC parameters
+FEC.Type = 'Convolutional';
+FEC.Constraint = 7;
+FEC.Trellis = poly2trellis(FEC.Constraint,[171 133]);
+FEC.VitDec.TraceBackDepth = 5*(FEC.Constraint-1); % approx for constraint
+FEC.VitDec.OpMode = 'trunc';
+FEC.VitDec.DecType = 'hard';
 
 %% Channel parameters
 CHANNEL.TapLength = 6;
@@ -100,14 +109,6 @@ CHANNEL.EstimationType = 'ls';
 if ~SIM.Fading % if no fading, don't do eq
     CHANNEL.Equalization = false;
 end
-
-%% FEC parameters
-FEC.Type = 'Convolutional';
-FEC.Constraint = 7;
-FEC.Trellis = poly2trellis(FEC.Constraint,[171 133]);
-FEC.VitDec.TraceBackDepth = 5*(FEC.Constraint-1); % approx for constraint
-FEC.VitDec.OpMode = 'trunc';
-FEC.VitDec.DecType = 'hard';
 
 %% Start Sim
 for frame = 1:OFDM.NumFrames

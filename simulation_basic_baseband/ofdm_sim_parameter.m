@@ -23,8 +23,8 @@ SIM.ChannelEstimation = true;
 if ~SIM.Fading % if no fading, don't estimate
     SIM.ChannelEstimation = false;
 end
-SIM.FECToggle = 0;
-SIM.Interleave = 0;
+SIM.FECToggle = 1;
+SIM.Interleave = 1;
 
 %% Data parameter
 main_path = fileparts(cd);

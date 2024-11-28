@@ -1,5 +1,7 @@
 function [OFDM,RF] = rf_downconvert(OFDM,RF,SIM)
+% downconvert to baseband
 
+% if CFO is present and PLL toggle is ON
 if RF.ANTENNA.RX.PLL.Toggle
     RF = rf_downconvert_carrier_recover(OFDM,RF);
 else

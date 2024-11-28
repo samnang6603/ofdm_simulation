@@ -7,6 +7,12 @@ end
 
 cext_rem = OFDM.TxAirChannel;
 
+% IQ imbalance correction and mitigation
+if RF.IMPAIRMENT.IQImbalance.Mitigation.Toggle
+    iqimbal_input = cext_rem;
+    cext_rem = rf_downconvert_impairment_IQimb_mitigate(iqimbal_input,RF);
+end
+
 % If pilot signal is active
 if SIM.PilotSignalToggle
     % remove the cyclic prefix length affected by addition of pilot signal
@@ -14,12 +20,6 @@ if SIM.PilotSignalToggle
 else 
     % remove unaffected length of cyclic prefix
     cext_rem(1:OFDM.NumCyclicSymsPerFrame) = [];
-end
-
-% IQ imbalance correction and mitigation
-if RF.IMPAIRMENT.IQImbalance.MitigationToggle
-    cext_rem = rf_downconvert_impairment_IQimb_mitigate(cext_rem,...
-                        OFDM.PilotSignalIFFT,OFDM.PilotSignalLocation);
 end
 
 OFDM.RxFFT = fft(cext_rem);
@@ -33,19 +33,6 @@ else
     CHANNEL.EstFreqResponse = fft(CHANNEL.ImpulseResponse,OFDM.NumCarriersPerFrame);
     OFDM.IdMatrixDiagLength = OFDM.NumCarriersPerFrame;
 end
-
-% if SIM.ChannelEstimation
-%     cext_rem(1:OFDM.NumCyclicPilotSymsPerFrame) = [];
-%     OFDM.RxFFT = fft(cext_rem);
-%     [OFDM,CHANNEL] = channel_estimate(CHANNEL,OFDM,SIM);
-% else
-%     % no estimation algorithm, no pilot signal
-%     % ideal, take the channel itself, no pilot signal
-%     cext_rem(1:OFDM.NumCyclicSymsPerFrame) = [];
-%     OFDM.RxFFT = fft(cext_rem);
-%     CHANNEL.EstFreqResponse = fft(CHANNEL.ImpulseResponse,OFDM.NumCarriersPerFrame);
-%     OFDM.IdMatrixDiagLength = OFDM.NumCarriersPerFrame;
-% end
 
 if CHANNEL.Equalization
     [OFDM,CHANNEL] = channel_apply_eq(CHANNEL,OFDM,SIM);
