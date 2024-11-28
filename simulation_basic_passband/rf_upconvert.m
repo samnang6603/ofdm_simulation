@@ -25,7 +25,4 @@ OFDM.RFTxAir = RF.ANTENNA.TX.Gain*ofdm_syms_zoh.*RF.PassBandSignalUpconvertGener
 %OFDM.RFTxAir = rf_antenna_agc(OFDM.RFTxAir,RF.ANTENNA.TX.AGC.TargetPower,...
                         %RF.ANTENNA.TX.Gain,0.1,RF.ANTENNA.TX.AGC.MinMaxGain);
 
-% simulate doppler shift if toggle
-if RF.IMPAIRMENT.DOPPLER.Toggle
-    OFDM.RFTxAir = rf_upconvert_impairment_doppler(OFDM.RFTxAir, RF);
 end

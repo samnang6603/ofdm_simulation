@@ -1,4 +1,4 @@
-N = 1024;
+N = 4096;
 sps = 16;
 x = randi([0 sps-1],N,1);
 txSig = qammod(x,sps,UnitAveragePower=true);
@@ -18,18 +18,26 @@ rxSig = real(txSig).*Igain + 1i*imag(txSig).*Qgain;
 
 scatterplot(rxSig,sps), title('RX Signal Constellation')
 
-w = complex(0,0);
-
 compSig = complex(zeros(length(rxSig),1),zeros(length(rxSig),1));
 mu = 1e-5;
 
-for n = 1:100
+w = complex(0,0);
+for n = 1:1000
     for m = 1:length(rxSig)
         compSig(m) = rxSig(m) + w*conj(rxSig(m));
         w(:) = w - mu*compSig(m)*compSig(m);
     end
 end
 
-scatterplot(compSig,sps), title('RX Comp Signal Constellation')
+% 4-tap w and 4-points average
+% w = complex(zeros(4,1),zeros(4,1));
+% for n = 1:10
+%     for m = 1:4:length(rxSig)
+%         compSig(m:m+3) = rxSig(m:m+3) + filter(w,1,conj(rxSig(m:m+3)));
+%         w(:) = w - mu*compSig(m:m+3).*compSig(m:m+3);
+%     end
+% end
+
+%scatterplot(compSig,sps), title('RX Comp Signal Constellation')
 
 scatterplot(compSig(N - 1000:end),sps), title('Last 1000 samples')

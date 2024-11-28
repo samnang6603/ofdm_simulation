@@ -1,6 +1,6 @@
 function [OFDM,DATA] = ofdm_receive(DATA,OFDM,RF,CHANNEL,SIM,FEC,frame)
 
-if RF.PassBandProcessingToggle
+if SIM.RF.PassBandProcessingToggle
     % downconvert to baseband
     [OFDM,RF] = rf_downconvert(OFDM,RF,SIM);
 end
@@ -14,7 +14,7 @@ if RF.IMPAIRMENT.IQImbalance.Mitigation.Toggle
 end
 
 % If pilot signal is active
-if SIM.PilotSignalToggle
+if SIM.CHANNEL.PilotSignalToggle
     % remove the cyclic prefix length affected by addition of pilot signal
     cext_rem(1:OFDM.NumCyclicPilotSymsPerFrame) = [];
 else 
@@ -25,7 +25,7 @@ end
 OFDM.RxFFT = fft(cext_rem);
 
 % If channel estimation is active
-if SIM.ChannelEstimation
+if SIM.CHANNEL.Estimation
      [OFDM,CHANNEL] = channel_estimate(CHANNEL,OFDM,SIM);
 else
     % no estimation algorithm, no pilot signal
@@ -34,12 +34,12 @@ else
     OFDM.IdMatrixDiagLength = OFDM.NumCarriersPerFrame;
 end
 
-if CHANNEL.Equalization
+if SIM.CHANNEL.Equalization
     [OFDM,CHANNEL] = channel_apply_eq(CHANNEL,OFDM,SIM);
 end
 
 % remove pilot signal
-if SIM.PilotSignalToggle % remove pilot signal if active
+if SIM.CHANNEL.PilotSignalToggle % remove pilot signal if active
     OFDM.RxFFT(OFDM.PilotSignalLocation) = [];
 end
 
@@ -47,12 +47,12 @@ end
 OFDM.RxDemod = qamdemod(OFDM.RxFFT,OFDM.M,OutputType='bit',UnitAveragePower=1);
 
 % FEC decode
-if SIM.FECToggle
+if SIM.FEC.Toggle
     OFDM = data_fec_decode(OFDM,FEC);
 end
 
 % Deinterleave
-if SIM.Interleave
+if SIM.FEC.InterleaveToggle
     OFDM.RxDemod = data_deinterleave(OFDM.RxDemod,FEC);
 end
 

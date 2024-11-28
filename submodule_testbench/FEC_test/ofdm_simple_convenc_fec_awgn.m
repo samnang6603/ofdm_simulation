@@ -17,7 +17,7 @@ data_hat = zeros(total_bits,1);
 
 %% Generating and data
 NumBits = total_bits; % # bits. Can modify this, but has to be power of two
-NumBitsPerFrame=256;
+NumBitsPerFrame=256*4;
 NumFrames = NumBits/NumBitsPerFrame;
 NumCarriersPerFrame=NumBitsPerFrame/K;
 NumCyclicSymsPerFrame=NumCarriersPerFrame*0.25;

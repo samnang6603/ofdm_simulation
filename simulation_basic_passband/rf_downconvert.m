@@ -24,7 +24,7 @@ load FIR_blackman_harris_60_taps.mat h
 
 % apply low pass filter (doubles as both baseband lpf and anti-aliasing
 % filter) only if fading and AWGN are present
-if SIM.Fading
+if SIM.CHANNEL.Fading
     baseband_recovery = 4*filter(h,1,baseband_recovery);
 end
 

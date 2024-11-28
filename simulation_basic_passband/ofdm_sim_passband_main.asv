@@ -17,13 +17,13 @@ clear
 rng('shuffle');
 
 % SNR settings
-SIM.EbN0 = 10;
+SIM.EbN0 = 2;
 SIM.SNR = SIM.EbN0 + 10*log10(sqrt(10));
 
 % Channel impairment
 SIM.CHANNEL.Fading = false;
 SIM.CHANNEL.AWGN = true;
-SIM.CHANNEL.PilotSignalToggle = true;
+SIM.CHANNEL.PilotSignalToggle = false;
 SIM.CHANNEL.Estimation = true;
 SIM.CHANNEL.Equalization = true;
 if ~SIM.CHANNEL.Fading % if no fading, don't estimate
@@ -35,15 +35,13 @@ if ~SIM.CHANNEL.PilotSignalToggle % if no pilot signal, can't estimate
 end
 
 % FEC control
-SIM.FEC.Type = 'Conv'; % default type
-SIM.FEC.Toggle = true;
-SIM.FEC.InterleaveToggle = true;
+SIM.FEC.Type = 'Conv';
+SIM.FEC.Toggle = 0;
+SIM.FEC.InterleaveToggle = 0;
 
 % RF control
-SIM.RF.PassBandProcessingToggle = true;
+SIM.RF.PassBandProcessingToggle = 0;
 SIM.RF.IMPAIRMENT.IQImbalanceToggle = 0;
-SIM.RF.IMPAIRMENT.DopplerToggle = 0;
-
 
 %% Data parameters
 main_path = fileparts(cd);
@@ -91,6 +89,7 @@ RF.ANTENNA.RX.PLL.Kp = 1.5;
 RF.ANTENNA.RX.PLL.Ki = 0.03;
 
 % Impairment: IQImbalance 
+RF.IMPAIRMENT.IQImbalance.Toggle = 0;
 RF.IMPAIRMENT.IQImbalance.IGain = 0;  % I gain imbalance (e.g., 0.1 means 10% gain difference)
 RF.IMPAIRMENT.IQImbalance.QGain = 0.2;  % Q gain imbalance (e.g., 0.1 means 10% gain difference)
 RF.IMPAIRMENT.IQImbalance.Phase = 15;   % Phase imbalance in degrees (e.g., 5 degrees)
@@ -98,6 +97,7 @@ RF.IMPAIRMENT.IQImbalance.Mitigation.Toggle = 0;
 RF.IMPAIRMENT.IQImbalance.Mitigation.Iteration = 1e3;
 
 % Impairment: Doppler
+RF.IMPAIRMENT.DOPPLER.Toggle = 0;
 RF.IMPAIRMENT.DOPPLER.FrequencyShift = 10e3; % fixed frequency shift
 RF.IMPAIRMENT.DOPPLER.PhaseShift = 0;
 RF.IMPAIRMENT.DOPPLER.SpeedOfLight = physconst('LightSpeed'); % for shift calculation
