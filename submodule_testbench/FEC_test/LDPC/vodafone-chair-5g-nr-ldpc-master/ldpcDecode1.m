@@ -65,10 +65,12 @@ switch LDPC.decType
                     
                     % Update message passing matrix
                     % From reference: Rcv = phi^-1(S-phi(Qtmp))
-                    Rcv(checkIdx, varIdx) = Ssign*QtmpSign * (-log(minVal+tanh(abs(Smag-QtmpMag)/2)));
+                    %Rcv(checkIdx, varIdx) = Ssign*QtmpSign * (-log(minVal+tanh(abs(Smag-QtmpMag)/2)));
+                    tmpRcv = Ssign*QtmpSign * (-log(minVal+tanh(abs(Smag-QtmpMag)/2)));
                     
                     % Update Qv. From reference: Qv = Qtmp + Rcv
-                    Qv(varIdx)  = Qtmp + Rcv(checkIdx, varIdx);
+                    %Qv(varIdx)  = Qtmp + Rcv(checkIdx, varIdx);
+                    Qv(varIdx)  = Qtmp + tmpRcv;
                     
                 end
                 

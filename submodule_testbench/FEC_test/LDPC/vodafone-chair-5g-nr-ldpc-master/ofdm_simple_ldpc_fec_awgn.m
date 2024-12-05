@@ -7,10 +7,13 @@ rng shuffle  % fix random seed
 % Modulation 16-QAM
 NumQam=16;
 K=log2(NumQam);
-EbN0 = 10;
+EbN0 = 5;
 SNR = EbN0 + 10*log10(sqrt(10));    % Convert EbN0 to SNR
 
 %% LDPC parameter
+if ~isdeployed
+    addpath('./codes');
+end
 blksize = 256;
 coderate = '1/2';
 LDPC = ldpcGet(blksize,coderate);
