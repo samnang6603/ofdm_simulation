@@ -124,7 +124,7 @@ for frame = 1:OFDM.NumFrames
     [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,RF,SIM);
     [OFDM,DATA] = ofdm_receive(DATA,OFDM,RF,CHANNEL,SIM,FEC,frame);
 end
-DATA = image_bitdecode(DATA,OFDM);
+DATA = image_bitdecode(DATA);
 error_percentage = 100*sum(DATA.BitData == DATA.BitDataHat)/length(DATA.BitData);
 ber = sum(DATA.BitData ~= DATA.BitDataHat)/length(DATA.BitData);
 fprintf('Correct bit recovered = %.6f%% \n',error_percentage);

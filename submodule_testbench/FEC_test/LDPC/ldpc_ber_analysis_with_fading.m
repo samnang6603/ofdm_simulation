@@ -167,6 +167,8 @@ end
 figure
 semilogy(SNR,BER,'r-*'), hold on, grid on
 semilogy(SNR,BER_ldpc,'b-^')
+xlabel('SNR')
+ylabel('BER')
 title('LDPC Performance with Fading')
 set(gca,'FontSize',14)
 legend('No LDPC','LDPC')

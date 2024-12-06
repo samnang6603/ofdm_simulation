@@ -179,6 +179,8 @@ semilogy(SNR,BER_ldpc_lbp,'g-*')
 semilogy(SNR,BER_ldpc_nms,'k-o')
 semilogy(SNR,BER_ldpc_oms,'m-v')
 legend('No LDPC','LDPC-BP','LDPC-LBP','LDPC-NMS','LDPC-OMS')
+xlabel('SNR')
+ylabel('BER')
 SNR = SNR(:);
 compare = [SNR,BER,BER_ldpc_bp,BER_ldpc_lbp,BER_ldpc_nms,BER_ldpc_oms];
 T = table(SNR,BER,BER_ldpc_bp,BER_ldpc_lbp,BER_ldpc_nms,BER_ldpc_oms);
