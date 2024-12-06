@@ -1,5 +1,5 @@
 %% LDPC vs No LDPC BER
-clear;
+close all; clear; clc
 
 rng shuffle  % fix random seed
 
@@ -8,20 +8,9 @@ NumQam=16;
 K=log2(NumQam);
 EbN0 = 0:3:21;
 SNR = EbN0 + 10*log10(sqrt(10));    % Convert EbN0 to SNR
-SNR = 0:3:21;
+SNR = 0:3:30;
 
 %% LDPC Parameters
-if ~isdeployed
-    addpath('./vodafone-chair-5g-nr-ldpc-master/codes');
-end
-blksize = 256;
-coderate = '1/2';
-LDPC = ldpcGet(blksize,coderate);
-Hsp = sparse(logical(LDPC.H));
-ecfg = ldpcEncoderConfig(Hsp);
-dcfg = ldpcDecoderConfig(Hsp);
-maxnumiter = 10;
-
 % Using code from MATLAB example
 P = [
     16 17 22 24  9  3 14 -1  4  2  7 -1 26 -1  2 -1 21 -1  1  0 -1 -1 -1 -1
@@ -34,14 +23,20 @@ P = [
 blockSize = 27;
 pcmatrix = ldpcQuasiCyclicMatrix(blockSize,P);
 ecfg = ldpcEncoderConfig(pcmatrix);
-dcfg = ldpcDecoderConfig(pcmatrix);
-
+dcfg_bp = ldpcDecoderConfig(pcmatrix);
+dcfg_lbp = ldpcDecoderConfig(pcmatrix,'layered-bp');
+dcfg_nms = ldpcDecoderConfig(pcmatrix,'norm-min-sum');
+dcfg_oms = ldpcDecoderConfig(pcmatrix,'offset-min-sum');
+maxnumiter = 10;
 
 %% Data Parameters
 total_bits = 100*ecfg.NumInformationBits;
 data = randi([0,1],total_bits,1);
 data_hat = zeros(total_bits,1);
-data_hat_ldpc = zeros(total_bits,1);
+data_hat_ldpc_bp = zeros(total_bits,1);
+data_hat_ldpc_lbp = zeros(total_bits,1);
+data_hat_ldpc_nms = zeros(total_bits,1);
+data_hat_ldpc_oms = zeros(total_bits,1);
 
 %% OFDM Parameters
 NumBits = total_bits;
@@ -55,11 +50,20 @@ NumSymsCyclic = NumCarriersPerFrame + NumCyclicSymsPerFrame;
 %% Monte Carlo Parameters
 monte_carlo_iter = 5;
 BER_mc = zeros(monte_carlo_iter,1);
-BER_mc_ldpc = BER_mc;
+BER_mc_ldpc_bp = BER_mc;
+BER_mc_ldpc_lbp = BER_mc;
+BER_mc_ldpc_nms = BER_mc;
+BER_mc_ldpc_oms = BER_mc;
 
 %% BER for each SNR allocation
 BER = zeros(length(SNR),1);
-BER_ldpc = BER;
+BER_ldpc_bp = BER;
+BER_ldpc_lbp = BER;
+BER_ldpc_nms = BER;
+BER_ldpc_oms = BER;
+
+%% Channel
+Chann_tap = 0;
 
 %% Loop
 for snr_idx = 1:length(SNR)
@@ -99,6 +103,11 @@ for snr_idx = 1:length(SNR)
             cyclic_idx = nfft-NumCyclicSymsPerFrame_ldpc+1:nfft;
             cext_data_ldpc = [ifft_sig(cyclic_idx); ifft_sig];
 
+            % Fading Rayleigh
+            % ray_fading = (randn(Chann_tap,1) + 1i*randn(Chann_tap,1))/sqrt(2);
+            % cext_data = filter(ray_fading,1,cext_data);
+            % cext_data_ldpc = filter(ray_fading,1,cext_data_ldpc);
+
             % AWGN at Receiver for no LDPC
             [ofdm_sig,noisevar] = awgn(cext_data,SNR(snr_idx),"measured");
             cext_rem = ofdm_sig;
@@ -114,10 +123,10 @@ for snr_idx = 1:length(SNR)
             fft_sig_ldpc = fft(cext_rem_ldpc);
 
             % demodulation no LDPC
-            y_hat = qamdemod(fft_sig,...
+            y_hat = qamdemod(fft_sig(:),...
                 NumQam,OutputType='bit',UnitAveragePower=0);
             % demodulation LDPC
-            y_hat_ldpc = qamdemod(fft_sig_ldpc,...
+            y_hat_ldpc = qamdemod(fft_sig_ldpc(:),...
                 NumQam,OutputType='approxllr',UnitAveragePower=0);
 
             % y_hat = qamdemod(awgn(y,SNR(snr_idx),'measured'),NumQam,...
@@ -135,23 +144,45 @@ for snr_idx = 1:length(SNR)
             end
 
             data_hat_frame = y_hat;
-            data_hat_frame_ldpc = ldpcDecode(y_hat_ldpc,dcfg,maxnumiter);
+
+            data_hat_frame_ldpc_bp = ldpcDecode(y_hat_ldpc,dcfg_bp,maxnumiter);
+            data_hat_frame_ldpc_lbp = ldpcDecode(y_hat_ldpc,dcfg_lbp,maxnumiter);
+            data_hat_frame_ldpc_nms = ldpcDecode(y_hat_ldpc,dcfg_nms,maxnumiter);
+            data_hat_frame_ldpc_oms = ldpcDecode(y_hat_ldpc,dcfg_oms,maxnumiter);
+
 
             % reshape for decode
             idx = (frame-1)*NumBitsPerFrame+1:(frame-1)*NumBitsPerFrame+NumBitsPerFrame;
             data_hat(idx) = data_hat_frame;
-            data_hat_ldpc(idx) = data_hat_frame_ldpc;
+            data_hat_ldpc_bp(idx) = data_hat_frame_ldpc_bp;
+            data_hat_ldpc_lbp(idx) = data_hat_frame_ldpc_lbp;
+            data_hat_ldpc_nms(idx) = data_hat_frame_ldpc_nms;
+            data_hat_ldpc_oms(idx) = data_hat_frame_ldpc_oms;
+
         end
         BER_mc(mc_idx) = sum(data~=data_hat)/total_bits;
-        BER_mc_ldpc(mc_idx) = sum(data~=data_hat_ldpc)/total_bits;
+        BER_mc_ldpc_bp(mc_idx) = sum(data~=data_hat_ldpc_bp)/total_bits;
+        BER_mc_ldpc_lbp(mc_idx) = sum(data~=data_hat_ldpc_lbp)/total_bits;
+        BER_mc_ldpc_nms(mc_idx) = sum(data~=data_hat_ldpc_nms)/total_bits;
+        BER_mc_ldpc_oms(mc_idx) = sum(data~=data_hat_ldpc_oms)/total_bits;
     end
     BER(snr_idx) = mean(BER_mc);
-    BER_ldpc(snr_idx) = mean(BER_mc_ldpc);
+    BER_ldpc_bp(snr_idx) = mean(BER_mc_ldpc_bp);
+    BER_ldpc_lbp(snr_idx) = mean(BER_mc_ldpc_lbp);
+    BER_ldpc_nms(snr_idx) = mean(BER_mc_ldpc_nms);
+    BER_ldpc_oms(snr_idx) = mean(BER_mc_ldpc_oms);
 end
 figure
 semilogy(SNR,BER,'r-*'), hold on, grid on
-semilogy(SNR,BER_ldpc,'b-^')
-legend('No LDPC','LDPC')
+semilogy(SNR,BER_ldpc_bp,'b-^')
+semilogy(SNR,BER_ldpc_lbp,'g-*')
+semilogy(SNR,BER_ldpc_nms,'k-o')
+semilogy(SNR,BER_ldpc_oms,'m-v')
+legend('No LDPC','LDPC-BP','LDPC-LBP','LDPC-NMS','LDPC-OMS')
+SNR = SNR(:);
+compare = [SNR,BER,BER_ldpc_bp,BER_ldpc_lbp,BER_ldpc_nms,BER_ldpc_oms];
+T = table(SNR,BER,BER_ldpc_bp,BER_ldpc_lbp,BER_ldpc_nms,BER_ldpc_oms);
+disp(T)
 
 
 %% Local fcn

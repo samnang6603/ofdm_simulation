@@ -19,7 +19,7 @@ SIM.EbN0 = 15;
 SIM.SNR = SIM.EbN0 + 10*log10(sqrt(10));
 SIM.Fading = true;
 SIM.AWGN = true;
-SIM.ChannelEstimation = true;
+SIM.ChannelEstimation = false;
 if ~SIM.Fading % if no fading, don't estimate
     SIM.ChannelEstimation = false;
 end

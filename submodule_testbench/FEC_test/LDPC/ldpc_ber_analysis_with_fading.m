@@ -8,14 +8,14 @@ NumQam=16;
 K=log2(NumQam);
 EbN0 = 0:3:21;
 SNR = EbN0 + 10*log10(sqrt(10));    % Convert EbN0 to SNR
-SNR = 0:3:21;
+SNR = 1:3:21;
 
 %% LDPC Parameters
 if ~isdeployed
     addpath('./vodafone-chair-5g-nr-ldpc-master/codes');
 end
 blksize = 256;
-coderate = '1/2';
+coderate = '3/4';
 LDPC = ldpcGet(blksize,coderate);
 Hsp = sparse(logical(LDPC.H));
 ecfg = ldpcEncoderConfig(Hsp);
@@ -34,7 +34,7 @@ P = [
 blockSize = 27;
 pcmatrix = ldpcQuasiCyclicMatrix(blockSize,P);
 ecfg = ldpcEncoderConfig(pcmatrix);
-dcfg = ldpcDecoderConfig(pcmatrix);
+dcfg = ldpcDecoderConfig(pcmatrix,'layered-bp');
 
 
 %% Data Parameters
@@ -60,6 +60,9 @@ BER_mc_ldpc = BER_mc;
 %% BER for each SNR allocation
 BER = zeros(length(SNR),1);
 BER_ldpc = BER;
+
+%% Channel
+Chann_tap = 6;
 
 %% Loop
 for snr_idx = 1:length(SNR)
@@ -92,12 +95,22 @@ for snr_idx = 1:length(SNR)
             cyclic_idx = nfft-NumCyclicSymsPerFrame+1:nfft;
             cext_data = [ifft_sig(cyclic_idx); ifft_sig];
 
+            % Fading Rayleigh for no LDPC
+            ray_fading = (randn(Chann_tap,1) + 1i*randn(Chann_tap,1))/sqrt(2);
+            cext_data = filter(ray_fading,1,cext_data);
+            H = diag(fft(ray_fading,nfft));
+
             % IFFT and add cyclic prefix for LDPC
             nfft = length(y_ldpc); %NumCarriersPerFrame + m*NumBitsPerFrame/k;
             NumCyclicSymsPerFrame_ldpc = floor(nfft*0.25);
             ifft_sig = ifft(y_ldpc);
             cyclic_idx = nfft-NumCyclicSymsPerFrame_ldpc+1:nfft;
             cext_data_ldpc = [ifft_sig(cyclic_idx); ifft_sig];
+
+             % Fading Rayleigh for LDPC
+            cext_data_ldpc = filter(ray_fading,1,cext_data_ldpc);
+            H_ldpc = diag(fft(ray_fading,nfft));
+
 
             % AWGN at Receiver for no LDPC
             [ofdm_sig,noisevar] = awgn(cext_data,SNR(snr_idx),"measured");
@@ -114,10 +127,13 @@ for snr_idx = 1:length(SNR)
             fft_sig_ldpc = fft(cext_rem_ldpc);
 
             % demodulation no LDPC
-            y_hat = qamdemod(fft_sig,...
+            Heq = (H'*H + (1/SNR(snr_idx)*eye(size(H))))\H';
+            y_hat = qamdemod(Heq*fft_sig,...
                 NumQam,OutputType='bit',UnitAveragePower=0);
+
             % demodulation LDPC
-            y_hat_ldpc = qamdemod(fft_sig_ldpc,...
+            Heq_ldpc = (H_ldpc'*H_ldpc + (1/SNR(snr_idx)*eye(size(H_ldpc))))\H_ldpc';
+            y_hat_ldpc = qamdemod(Heq_ldpc*fft_sig_ldpc,...
                 NumQam,OutputType='approxllr',UnitAveragePower=0);
 
             % y_hat = qamdemod(awgn(y,SNR(snr_idx),'measured'),NumQam,...
@@ -151,6 +167,8 @@ end
 figure
 semilogy(SNR,BER,'r-*'), hold on, grid on
 semilogy(SNR,BER_ldpc,'b-^')
+title('LDPC Performance with Fading')
+set(gca,'FontSize',14)
 legend('No LDPC','LDPC')
 
 
