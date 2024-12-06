@@ -1,4 +1,4 @@
-%% LDPC Convolutional code testbench
+%% LDPC/Convolutional code testbench
 
 close all; clear; clc
 
@@ -17,20 +17,23 @@ end
 blksize = 256;
 coderate = '1/2';
 LDPC = ldpcGet(blksize,coderate);
-LDPCToggle = 1;
+LDPCToggle = 0;
 if LDPCToggle
     qamdemodout = 'approxllr';
 else
     qamdemodout = 'bit';
 end
+Hsp = sparse(logical(LDPC.H));
+ecfg = ldpcEncoderConfig(Hsp);
+dcfg = ldpcDecoderConfig(Hsp);
 
 %% Data
-total_bits = 20*LDPC.numInfBits;
+total_bits = 10000*LDPC.numInfBits;
 data = randi([0 1],total_bits,1);
 data_hat = zeros(total_bits,1);
 
-%% Generating and data
-NumBits = total_bits; % # bits. Can modify this, but has to be power of two
+%% OFDM Param
+NumBits = total_bits; 
 NumBitsPerFrame=LDPC.numInfBits;
 NumFrames = NumBits/NumBitsPerFrame;
 NumCarriersPerFrame=floor(NumBitsPerFrame/K);
@@ -48,12 +51,14 @@ dectype = 'hard';
 
 
 %% 
+tic
 for frame = 1:NumFrames
     data_frame = data((frame-1)*NumBitsPerFrame+1:(frame-1)*NumBitsPerFrame+NumBitsPerFrame);
     
     %data_frame_codeword = convenc(data_frame,trellis);
     if LDPCToggle
-        data_frame_codeword = ldpcEncode1(data_frame',LDPC);
+        %data_frame_codeword = ldpcEncode1(data_frame',LDPC);
+        data_frame_codeword = ldpcEncode(data_frame,ecfg);
     else
         data_frame_codeword = data_frame;
     end
@@ -94,7 +99,8 @@ for frame = 1:NumFrames
 
     % demodulation
     if LDPCToggle
-        data_hat_frame = ldpcDecode1(data_hat_codeword',LDPC);
+        %data_hat_frame = ldpcDecode1(data_hat_codeword',LDPC);
+        data_hat_frame = ldpcDecode(data_hat_codeword,dcfg,10);
     else
         data_hat_frame = data_hat_codeword;
     end
@@ -103,6 +109,7 @@ for frame = 1:NumFrames
     data_hat((frame-1)*NumBitsPerFrame+1:(frame-1)*NumBitsPerFrame+NumBitsPerFrame) = data_hat_frame;
 end
 BER = sum(data~=data_hat)/total_bits
+toc
 
 function [y,num_zero_pad] = nextdivpadzero(x,n)
 % find next value of the length of x that is divisible by n then pad zero
