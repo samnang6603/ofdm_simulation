@@ -15,16 +15,16 @@ clear
 
 %% Simulation parameter
 rng('shuffle');
-SIM.EbN0 = 15;
+SIM.EbN0 = 20;
 SIM.SNR = SIM.EbN0 + 10*log10(sqrt(10));
-SIM.Fading = false;
-SIM.AWGN = false;
-SIM.ChannelEstimation = false;
+SIM.Fading = true;
+SIM.AWGN = true;
+SIM.ChannelEstimation = true;
 if ~SIM.Fading % if no fading, don't estimate
     SIM.ChannelEstimation = false;
 end
-SIM.FECToggle = 0;
-SIM.Interleave = 0;
+SIM.FECToggle = 1;
+SIM.Interleave = 1;
 
 %% Data parameter
 main_path = fileparts(cd);
@@ -40,15 +40,19 @@ DATA = image_bitencode(DATA);
 %% OFDM parameter
 OFDM.M = 16;
 OFDM.BitsPerSymbol = log2(OFDM.M);
-OFDM.NumPilotSpacing = 8;
+OFDM.NumPilotSpacing = 8; % must be integer multiple of OFDM.NumBitsPerFrame
 OFDM.NumBits = DATA.TotalBits;
 OFDM.NumBitsPerFrame = 256*7;
 OFDM.NumFrames = OFDM.NumBits/OFDM.NumBitsPerFrame;
 OFDM.NumCarriersPerFrame = OFDM.NumBitsPerFrame/OFDM.BitsPerSymbol;
 OFDM.NumPilotPerFrame = OFDM.NumCarriersPerFrame/OFDM.NumPilotSpacing;
-OFDM.NumCarrierPilotPerFrame = OFDM.NumCarriersPerFrame + OFDM.NumPilotPerFrame;
+OFDM.NumCarriersPilotPerFrame = OFDM.NumCarriersPerFrame + OFDM.NumPilotPerFrame;
 OFDM.NumCyclicSymsPerFrame = floor(OFDM.NumCarriersPerFrame*0.25);
-OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarrierPilotPerFrame*0.25);
+OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarriersPilotPerFrame*0.25);
+
+if OFDM.NumPilotSpacing > OFDM.NumBitsPerFrame
+    error('Pilot Spacing cannot be larger than number of subcarrier')
+end
 
 %% Channel parameter
 CHANNEL.TapLength = 6;
@@ -63,9 +67,9 @@ end
 %% FEC parameter
 FEC = fec_init('ldpc',SIM);
 
-
 %% Start Sim
-% Handle non-integer number of frames
+% Handle non-integer number of frames as a result of total number of bits
+% and number of subcarriers
 [DATA,OFDM] = data_validate_frame_fit(DATA,OFDM);
 for frame = 1:OFDM.NumFrames
     [OFDM,FEC] = ofdm_transmit(DATA,OFDM,SIM,FEC,frame);
@@ -123,6 +127,7 @@ function [DATA,OFDM] = data_validate_frame_fit(DATA,OFDM)
 % Handle non-integer frame size. Pad data with zero for the fractional i-th
 % frame to make data_frame input valid length
 if rem(OFDM.NumFrames,1) == 0 % if frame is integer do nothing
+    DATA.FrameNumZeroPadded = 0;
     return
 end
 
@@ -153,39 +158,19 @@ if SIM.Interleave
 end
 OFDM.data_frame_codeword = OFDM.data_frame;
 if SIM.FECToggle
-    [OFDM.data_frame_codeword,FEC] = fec_encode(OFDM.data_frame,FEC);
-    % Update OFDM parameter based on FEC parameter
-    OFDM.NumBitsPerFrame = length(OFDM.data_frame_codeword); 
-    OFDM.NumCarriersPerFrame = OFDM.NumBitsPerFrame/OFDM.BitsPerSymbol;
-    OFDM.NumPilotPerFrame = OFDM.NumCarriersPerFrame/OFDM.NumPilotSpacing;
-    OFDM.NumCarrierPilotPerFrame = OFDM.NumCarriersPerFrame + OFDM.NumPilotPerFrame;
-    OFDM.NumCyclicSymsPerFrame = floor(OFDM.NumCarriersPerFrame*0.25);
-    OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarrierPilotPerFrame*0.25);
+    [FEC,OFDM] = fec_encode(FEC,OFDM);
 end
 
-[OFDM.data_frame_codeword,OFDM] = ofdm_transmit_validate_mapper_input(...
-                        OFDM.data_frame_codeword,OFDM);
-
-OFDM.TxSymbols = qammod(OFDM.data_frame_codeword,OFDM.M,InputType='bit');
+% symbols mapper (symbol modulation)
+OFDM = ofdm_transmit_symbols_mapper(OFDM);
 
 if SIM.ChannelEstimation
-    % Add pilot
-    yp = zeros(OFDM.NumCarrierPilotPerFrame,1);
-    Xp = 2*randi([0 1],OFDM.NumPilotPerFrame,1)-1;
-    spc = OFDM.NumPilotSpacing;
-    pilot_loc = 1:spc+1:OFDM.NumCarrierPilotPerFrame;
-    yp(pilot_loc) = Xp;
-    for k = 0:OFDM.NumPilotPerFrame-1
-        yp(2+k*(spc+1):1+k*(spc+1)+spc) = OFDM.TxSymbols(k*spc+1:k*spc+spc);
-    end
+    [yp,OFDM] = ofdm_transmit_add_pilot_signal(OFDM);
     % transmitter with pilot
-    ifft_sig_pilot = ifft(yp,OFDM.NumCarrierPilotPerFrame);
-    cyclic_idx = OFDM.NumCarrierPilotPerFrame-...
-        OFDM.NumCyclicPilotSymsPerFrame+1:OFDM.NumCarrierPilotPerFrame;
+    ifft_sig_pilot = ifft(yp,OFDM.NumCarriersPilotPerFrame);
+    cyclic_idx = OFDM.NumCarriersPilotPerFrame-...
+        OFDM.NumCyclicPilotSymsPerFrame+1:OFDM.NumCarriersPilotPerFrame;
     cext_data = [ifft_sig_pilot(cyclic_idx); ifft_sig_pilot];
-
-    OFDM.PilotSignal = Xp;
-    OFDM.PilotSignalLocation = pilot_loc;
 else
     % transmitter no pilot
     ifft_sig = ifft(OFDM.TxSymbols,OFDM.NumCarriersPerFrame);
@@ -216,18 +201,18 @@ switch lower(CHANNEL.EstimationType)
         % Minimum-Mean-Squared-Error method
         CHANNEL.EstFreqResponse = chanest_mmse(OFDM.RxFFT,OFDM.PilotSignal,...
                                                OFDM.PilotSignalLocation,...
-                                               OFDM.NumCarrierPilotPerFrame,...
+                                               OFDM.NumCarriersPilotPerFrame,...
                                                OFDM.NumPilotSpacing,...
                                                CHANNEL.ImpulseResponse.',SIM.SNR);
-        CHANNEL = chanest_dft_enhance(CHANNEL,OFDM.NumCarrierPilotPerFrame);
+        CHANNEL = chanest_dft_enhance(CHANNEL,OFDM.NumCarriersPilotPerFrame);
     otherwise
         % Least-Square method default
         CHANNEL.EstFreqResponse = chanest_ls(OFDM.RxFFT,OFDM.PilotSignal,...
                                              OFDM.PilotSignalLocation,...
-                                             OFDM.NumCarrierPilotPerFrame);
-        CHANNEL = chanest_dft_enhance(CHANNEL,OFDM.NumCarrierPilotPerFrame);
+                                             OFDM.NumCarriersPilotPerFrame);
+        CHANNEL = chanest_dft_enhance(CHANNEL,OFDM.NumCarriersPilotPerFrame);
 end
-OFDM.IdMatrixDiagLength = OFDM.NumCarrierPilotPerFrame;
+OFDM.IdMatrixDiagLength = OFDM.NumCarriersPilotPerFrame;
 end
 
 function [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,FEC,frame)
@@ -246,19 +231,15 @@ else
 end
 
 if CHANNEL.Equalization
-    [OFDM,CHANNEL] = channel_apply_eq(CHANNEL,OFDM,SIM);
+    [OFDM,~] = channel_apply_eq(CHANNEL,OFDM,SIM);
 end
 
-OFDM.RxDemod = qamdemod(OFDM.RxFFT,OFDM.M,OutputType=FEC.DemapOutputType);
-
-% Remove any padded zeros by Mapper at Tx
-OFDM.RxDemod(end-OFDM.MapperZeroPadded+1:end) = [];
+% symbols demapper (symbol demodulation)
+OFDM = ofdm_receive_symbols_demapper(OFDM,FEC);
 
 if SIM.FECToggle
-    % OFDM.RxDemod = vitdec(OFDM.RxDemod,FEC.Trellis,FEC.VitDec.TraceBackDepth,...
-    %                       FEC.VitDec.OpMode,FEC.VitDec.DecType);
     OFDM.RxDemod = fec_decode(OFDM.RxDemod,FEC);
-    % Re-update OFDM param after decoding
+    % Re-update OFDM Bits per frame after decoding
     OFDM.NumBitsPerFrame = length(OFDM.data_frame);
 end
 if SIM.Interleave
@@ -275,6 +256,8 @@ CHANNEL.EqFreqResponse = (H'*H + (1/SIM.SNR*eye(OFDM.IdMatrixDiagLength)))\H';
 OFDM.RxFFT = CHANNEL.EqFreqResponse*OFDM.RxFFT;
 if SIM.ChannelEstimation % remove pilot signal if channel est being used
     OFDM.RxFFT(OFDM.PilotSignalLocation) = [];
+    % remove any zero if padded
+    OFDM.RxFFT(end-OFDM.NumPilotZeroPadded+1:end) = [];
 end
 end
 
@@ -365,7 +348,8 @@ switch lower(fec_type)
 end
 end
 
-function [cw,FEC] = fec_encode(x,FEC)
+function [FEC,OFDM] = fec_encode(FEC,OFDM)
+x = OFDM.data_frame;
 switch FEC.Type
     case 'Convolutional'
         cw = convenc(x,FEC.Trellis);
@@ -382,6 +366,11 @@ switch FEC.Type
             cw(tmp_idx_cw) = ldpcEncode(x(tmp_idx_x),FEC.Ecfg);
         end
 end
+OFDM.data_frame_codeword = cw;
+% Update OFDM parameter based on FEC change to data length
+OFDM.NumBitsPerFrame = length(cw);
+% Update the rest of OFDM param
+OFDM = ofdm_update_param(OFDM);
 end
 
 function x = fec_decode(cw,FEC)
@@ -401,7 +390,7 @@ switch FEC.Type
             tmp_idx_cw = cwinfo*(k-1)+1:cwinfo*(k-1) + cwinfo;
             x(tmp_idx_x) = ldpcDecode(llr(tmp_idx_cw),FEC.Dcfg,FEC.Maxnumiter);
         end
-        % Remove paddded zeros
+        % Remove any padded zeros
         x(end-FEC.NumZeroPadded+1:end) = [];
 end
 end
@@ -432,7 +421,7 @@ num_zero_pad = ldpc_input_len - remainder_len;
 
 % concatenate the zeros
 xseg = [x
-        zeros(num_zero_pad,1,'like',x)];
+        zeros(num_zero_pad,1)];
 
 FEC.NumSegment = num_segments;
 
@@ -447,22 +436,101 @@ FEC.NumZeroPadded = num_zero_pad;
 
 end
 
-function [y,OFDM] = ofdm_transmit_validate_mapper_input(x,OFDM)
+function OFDM = ofdm_transmit_symbols_mapper(OFDM)
+% Adjust input to mapper as integer multiple of bits per symbol
+OFDM = ofdm_transmit_adjust_mapper_input(OFDM);
+if OFDM.MapperZeroPadded ~= 0 % if zero pad, update OFDM param
+    OFDM.NumBitsPerFrame = length(OFDM.data_frame_codeword);
+    OFDM = ofdm_update_param(OFDM);
+end
+OFDM.TxSymbols = qammod(OFDM.data_frame_codeword,OFDM.M,InputType='bit');
+end
+
+function OFDM = ofdm_receive_symbols_demapper(OFDM,FEC)
+OFDM.RxDemod = qamdemod(OFDM.RxFFT,OFDM.M,OutputType=FEC.DemapOutputType);
+% Remove any padded zeros by Mapper at Tx
+OFDM.RxDemod(end-OFDM.MapperZeroPadded+1:end) = [];
+end
+
+function OFDM = ofdm_transmit_adjust_mapper_input(OFDM)
 % validate and adjust the length of output y to see if valid for mapper
 % input.
 % Then Find next value of the length of x that is divisible by n then pad zero
 % by num_zero_pad to that value to output y
 %
-l = length(x);
+l = length(OFDM.data_frame_codeword);
 n = OFDM.BitsPerSymbol;
-mapper_len_cond = rem(l,n) ~= 0;
+mapper_len_cond = rem(l,n) == 0;
+% if bit length is divisible by bits per symbols
 if mapper_len_cond
+    OFDM.MapperZeroPadded = 0;
+    return
+end
     nextval = l + (n - rem(l,n));
     num_zero_pad = nextval-l;
-    y = [x(:);zeros(num_zero_pad,1)];
+    OFDM.data_frame_codeword = [OFDM.data_frame_codeword
+                                zeros(num_zero_pad,1)];
+    % save number of zero pad to be removed by receiver
     OFDM.MapperZeroPadded = num_zero_pad;
-else
-    y = x;
-    OFDM.MapperZeroPadded = 0;
 end
+
+function [yp,OFDM] = ofdm_transmit_add_pilot_signal(OFDM)
+% Add pilot
+% If Num pilot per frame is non-integer
+OFDM = ofdm_transmit_adjust_pilot_signal(OFDM);
+yp = zeros(OFDM.NumCarriersPilotPerFrame,1);
+Xp = 2*randi([0 1],OFDM.NumPilotPerFrameAdjusted,1)-1;
+spc = OFDM.NumPilotSpacing;
+pilot_loc = 1:spc+1:OFDM.NumCarriersPilotPerFrame;
+yp(pilot_loc) = Xp;
+for k = 0:OFDM.NumPilotPerFrameAdjusted-1
+    yp(2+k*(spc+1):1+k*(spc+1)+spc) = OFDM.TxSymbols(k*spc+1:k*spc+spc);
+end
+OFDM.PilotSignal = Xp;
+OFDM.PilotSignalLocation = pilot_loc;
+end
+
+function OFDM = ofdm_transmit_adjust_pilot_signal(OFDM)
+% validate and adjust the length of the signal after pilot insertion to
+% make sure signal + pilot is in proper length for processing
+if rem(OFDM.NumPilotPerFrame,1) == 0
+    OFDM.NumPilotZeroPadded = 0;
+    OFDM.NumPilotPerFrameAdjusted = OFDM.NumPilotPerFrame;
+    return
+end
+ncpf = OFDM.NumCarriersPerFrame;
+pspc = OFDM.NumPilotSpacing;
+
+% Calculate next value that is integer multiple of num of pilot spacing
+nextval = ncpf + (pspc - rem(ncpf,pspc));
+
+% get number of zeros to be padded
+num_zero_pad = nextval - ncpf;
+
+% Append zeros
+OFDM.TxSymbols = [OFDM.TxSymbols
+                  zeros(num_zero_pad,1)];
+
+% save number of padded zeros to be removed by receiver
+OFDM.NumPilotZeroPadded = num_zero_pad;
+
+% ceil up the number of pilot per frame
+OFDM.NumPilotPerFrameAdjusted = ceil(OFDM.NumPilotPerFrame);  
+
+% update number of carrier per frame
+OFDM.NumCarriersPerFrame = ncpf + num_zero_pad;
+
+% update the number of carrier pilot per frame
+OFDM.NumCarriersPilotPerFrame = ceil(OFDM.NumCarriersPilotPerFrame + num_zero_pad);
+end
+
+function OFDM = ofdm_update_param(OFDM)
+% Update OFDM parameters based on num bits per frame adjusted by other
+% handler functions
+% Will be called anytime there's a change to processing input length
+OFDM.NumCarriersPerFrame = OFDM.NumBitsPerFrame/OFDM.BitsPerSymbol;
+OFDM.NumPilotPerFrame = OFDM.NumCarriersPerFrame/OFDM.NumPilotSpacing;
+OFDM.NumCarriersPilotPerFrame = OFDM.NumCarriersPerFrame + OFDM.NumPilotPerFrame;
+OFDM.NumCyclicSymsPerFrame = floor(OFDM.NumCarriersPerFrame*0.25);
+OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarriersPilotPerFrame*0.25);
 end

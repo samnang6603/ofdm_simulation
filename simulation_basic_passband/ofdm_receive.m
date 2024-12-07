@@ -35,7 +35,7 @@ else
 end
 
 if SIM.CHANNEL.Equalization
-    [OFDM,CHANNEL] = channel_apply_eq(CHANNEL,OFDM,SIM);
+    [OFDM,~] = channel_apply_eq(CHANNEL,OFDM,SIM);
 end
 
 % remove pilot signal
@@ -43,12 +43,18 @@ if SIM.CHANNEL.PilotSignalToggle % remove pilot signal if active
     OFDM.RxFFT(OFDM.PilotSignalLocation) = [];
 end
 
+% Remove any padded zeros by Mapper at Tx
+OFDM.RxDemod(end-OFDM.MapperZeroPadded+1:end) = [];
+
 % symbols de-mapping
-OFDM.RxDemod = qamdemod(OFDM.RxFFT,OFDM.M,OutputType='bit',UnitAveragePower=1);
+OFDM.RxDemod = qamdemod(OFDM.RxFFT,OFDM.M,OutputType='bit');
+
+% Remove any padded zeros by Mapper at Tx
+OFDM.RxDemod(end-OFDM.MapperZeroPadded+1:end) = [];
 
 % FEC decode
 if SIM.FEC.Toggle
-    OFDM = data_fec_decode(OFDM,FEC);
+    OFDM.RxDemod = data_fec_decode(OFDM.RxDemod,FEC);
 end
 
 % Deinterleave

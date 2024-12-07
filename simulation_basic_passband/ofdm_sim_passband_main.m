@@ -105,12 +105,7 @@ RF.IMPAIRMENT.DOPPLER.TxVelocity = 0; % for later
 RF.IMPAIRMENT.DOPPLER.RxVelocity = 0; % for later
 
 %% FEC parameters
-FEC.Type = 'Convolutional';
-FEC.Constraint = 7;
-FEC.Trellis = poly2trellis(FEC.Constraint,[171 133]);
-FEC.VitDec.TraceBackDepth = 5*(FEC.Constraint-1); % approx for constraint
-FEC.VitDec.OpMode = 'trunc';
-FEC.VitDec.DecType = 'hard';
+FEC = fec_init(SIM);
 
 %% Channel parameters
 CHANNEL.TapLength = 6;
@@ -119,9 +114,12 @@ CHANNEL.DelayObj = dsp.Delay(CHANNEL.Delay);
 CHANNEL.EstimationType = 'ls';
 
 %% Start Sim
+% Handle non-integer number of frames as a result of total number of bits
+% and number of subcarriers
+[DATA,OFDM] = data_validate_frame_fit(DATA,OFDM);
 for frame = 1:OFDM.NumFrames
     [OFDM,RF,FEC] = ofdm_transmit(DATA,OFDM,RF,SIM,FEC,frame);
-    [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,RF,SIM);
+    [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,SIM);
     [OFDM,DATA] = ofdm_receive(DATA,OFDM,RF,CHANNEL,SIM,FEC,frame);
 end
 DATA = image_bitdecode(DATA);

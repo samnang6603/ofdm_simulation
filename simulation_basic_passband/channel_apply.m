@@ -1,11 +1,11 @@
-function [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,RF,SIM)
+function [OFDM,CHANNEL] = channel_apply(CHANNEL,OFDM,SIM)
 % Apply channel based on fading and AWGN conditions
 
 % Handle fading (Jake model or custom fading model)
 if SIM.CHANNEL.Fading
-    CHANNEL.ImpulseResponse = jake(120,CHANNEL.TapLength);
-    % CHANNEL.ImpulseResponse = 1/sqrt(2)*(randn(CHANNEL.TapLength,1) +...
-    %                           1j*randn(CHANNEL.TapLength,1)); 
+    %CHANNEL.ImpulseResponse = jake(120,CHANNEL.TapLength);
+    CHANNEL.ImpulseResponse = 1/sqrt(2)*(randn(CHANNEL.TapLength,1) +...
+                               1j*randn(CHANNEL.TapLength,1)); 
 else
     % No fading, simple channel
     CHANNEL.ImpulseResponse = 1;

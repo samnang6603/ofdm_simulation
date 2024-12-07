@@ -9,10 +9,13 @@ end
 OFDM.data_frame_codeword = OFDM.data_frame;
 
 if SIM.FEC.Toggle
-    OFDM = data_fec_encode(OFDM,FEC);
+    OFDM.data_frame_codeword = data_fec_encode(OFDM.data_frame_codeword,FEC);
 end
 
-OFDM.TxSymbols = qammod(OFDM.data_frame_codeword,OFDM.M,InputType='bit',UnitAveragePower=1);
+[OFDM.data_frame_codeword,OFDM] = ofdm_transmit_adjust_mapper_input(...
+                        OFDM.data_frame_codeword,OFDM);
+
+OFDM.TxSymbols = qammod(OFDM.data_frame_codeword,OFDM.M,InputType='bit');
 
 if SIM.CHANNEL.PilotSignalToggle
     % Create Pilot signal
@@ -64,4 +67,24 @@ if SIM.RF.IMPAIRMENT.DopplerToggle
     OFDM.RFTxAir = rf_upconvert_impairment_doppler(OFDM.RFTxAir, RF);
 end
 
+end
+
+function [y,OFDM] = ofdm_transmit_adjust_mapper_input(x,OFDM)
+% validate and adjust the length of output y to see if valid for mapper
+% input.
+% Then Find next value of the length of x that is divisible by n then pad zero
+% by num_zero_pad to that value to output y
+%
+l = length(x);
+n = OFDM.BitsPerSymbol;
+mapper_len_cond = rem(l,n) ~= 0;
+if mapper_len_cond
+    nextval = l + (n - rem(l,n));
+    num_zero_pad = nextval-l;
+    y = [x(:);zeros(num_zero_pad,1)];
+    OFDM.MapperZeroPadded = num_zero_pad;
+else
+    y = x;
+    OFDM.MapperZeroPadded = 0;
+end
 end
