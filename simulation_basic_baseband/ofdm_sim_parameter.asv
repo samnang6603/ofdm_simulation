@@ -42,7 +42,7 @@ OFDM.M = 16;
 OFDM.BitsPerSymbol = log2(OFDM.M);
 OFDM.NumPilotSpacing = 8;
 OFDM.NumBits = DATA.TotalBits;
-OFDM.NumBitsPerFrame = 256*7;
+OFDM.NumBitsPerFrame = 256*6;
 OFDM.NumFrames = OFDM.NumBits/OFDM.NumBitsPerFrame;
 OFDM.NumCarriersPerFrame = OFDM.NumBitsPerFrame/OFDM.BitsPerSymbol;
 OFDM.NumPilotPerFrame = OFDM.NumCarriersPerFrame/OFDM.NumPilotSpacing;
@@ -65,7 +65,7 @@ FEC = fec_init('ldpc',SIM);
 
 
 %% Start Sim
-% Handle non-integer number of frames
+% Handle non-integer frame size
 [DATA,OFDM] = data_validate_frame_fit(DATA,OFDM);
 for frame = 1:OFDM.NumFrames
     [OFDM,FEC] = ofdm_transmit(DATA,OFDM,SIM,FEC,frame);
@@ -102,10 +102,7 @@ DATA.DataHat = zeros(DATA.NumElement,1,'uint8');
 end
 
 function DATA = image_bitdecode(DATA)
-% remove padded 0 from frame handling non-integer number of frames from
-% DATA.BitData and BitDataHat
-DATA.BitData(end-DATA.FrameNumZeroPadded+1:end) = [];
-DATA.BitDataHat(end-DATA.FrameNumZeroPadded+1:end) = [];
+% remove padded 0 from frame handling 
 % decode grayscale
 data_hat_reshape = reshape(DATA.BitDataHat,8,DATA.TotalBits/8).';
 data_hat_decode = mat2str(data_hat_reshape);
@@ -135,9 +132,6 @@ DATA.FrameNumZeroPadded = OFDM.NumBitsPerFrame-remainder_data;
 DATA.BitData = [DATA.BitData
                 zeros(DATA.FrameNumZeroPadded,1,'like',...
                       DATA.BitData)];
-
-% Also update BitDataHat length
-DATA.BitDataHat = zeros(length(DATA.BitData),1,'like',DATA.BitData);
 
 % Ceil up the number of frame to next largest integer
 OFDM.NumFrames = ceil(OFDM.NumFrames);
