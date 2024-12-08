@@ -12,7 +12,7 @@ SNR = EbN0 + 10*log10(sqrt(10));    % Convert EbN0 to SNR
 
 %% LDPC parameter
 if ~isdeployed
-    addpath('./codes');
+    addpath('./vodafone-chair-5g-nr-ldpc-master/codes');
 end
 blksize = 256;
 coderate = '1/2';

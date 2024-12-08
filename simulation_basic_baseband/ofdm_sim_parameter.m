@@ -17,14 +17,17 @@ clear
 rng('shuffle');
 SIM.EbN0 = 20;
 SIM.SNR = SIM.EbN0 + 10*log10(sqrt(10));
-SIM.Fading = true;
+SIM.Fading = false;
 SIM.AWGN = true;
 SIM.ChannelEstimation = true;
 if ~SIM.Fading % if no fading, don't estimate
     SIM.ChannelEstimation = false;
 end
-SIM.FECToggle = 1;
-SIM.Interleave = 1;
+SIM.FECToggle = 0;
+SIM.Interleave = 0;
+SIM.CFOToggle = 1;
+SIM.CFO = 0.15;
+SIM.CFOCorrectionToggle = 0;
 
 %% Data parameter
 main_path = fileparts(cd);
@@ -216,6 +219,16 @@ OFDM.IdMatrixDiagLength = OFDM.NumCarriersPilotPerFrame;
 end
 
 function [OFDM,DATA] = ofdm_receive(DATA,OFDM,CHANNEL,SIM,FEC,frame)
+
+% Add CFO here
+if SIM.CFOToggle
+    OFDM = ofdm_receive_add_cfo(SIM,OFDM);
+end
+
+if SIM.CFOCorrectionToggle
+    OFDM = ofdm_receive_cfo_cp_correct(OFDM);
+end
+
 cext_rem = OFDM.TxAirChannel;
 if SIM.ChannelEstimation
     cext_rem(1:OFDM.NumCyclicPilotSymsPerFrame) = [];
@@ -533,4 +546,25 @@ OFDM.NumPilotPerFrame = OFDM.NumCarriersPerFrame/OFDM.NumPilotSpacing;
 OFDM.NumCarriersPilotPerFrame = OFDM.NumCarriersPerFrame + OFDM.NumPilotPerFrame;
 OFDM.NumCyclicSymsPerFrame = floor(OFDM.NumCarriersPerFrame*0.25);
 OFDM.NumCyclicPilotSymsPerFrame = floor(OFDM.NumCarriersPilotPerFrame*0.25);
+end
+
+function OFDM = ofdm_receive_add_cfo(SIM,OFDM)
+% Add CFO to received signal
+x = OFDM.TxAirChannel;
+nn = (0:length(x)-1)';
+nfft = length(OFDM.TxSymbols);
+y = x.*exp(1i*2*pi*SIM.CFO*nn/nfft);
+OFDM.TxAirChannel = y;
+end
+
+function OFDM = ofdm_receive_cfo_cp_correct(OFDM)
+% Correct CFO using CP-based technique
+x = OFDM.TxAirChannel(:).';
+nn = 0:length(x)-1;
+nfft = length(OFDM.TxSymbols);
+ncp = OFDM.NumCyclicSymsPerFrame;
+k = 1:ncp;
+cfo_est = angle(x(k+nfft)*x(k)')/(2*pi);
+y = x.*exp(-1i*2*pi*cfo_est*nn/nfft);
+OFDM.TxAirChannel = y.';
 end
